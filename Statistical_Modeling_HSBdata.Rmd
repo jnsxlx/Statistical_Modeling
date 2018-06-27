@@ -1,5 +1,5 @@
 ---
-title: '420 Final Project - Model fit for hsb data'
+title: 'STAT420 Final Project - Model fit for hsb data'
 author: "Xiao Li"
 date: 'May 7, 2017'
 output:
