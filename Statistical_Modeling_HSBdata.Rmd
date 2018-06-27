@@ -1,0 +1,201 @@
+---
+title: '420 Final Project - Model fit for hsb data'
+author: "Xiao Li"
+date: 'May 7, 2017'
+output:
+  html_document:
+    theme: readable
+    toc: yes
+---
+
+#Project Overview
+
+##Data description
+```{r}
+hsb_data <- read.table("/Users/Xiao/Downloads/420 Final Project/hsb-data.sas copy", header=TRUE, row.names="id")
+```
+
+The high school and Beyond data set (hsb) is from a large-scale longitudinal study
+conducted by the National Opinion Research Center (1980) under contract with the
+National Center for Education Statistcs. The students in the study are a nationally
+representative sample of n = 600 high school seniors with observations on 15 variables.
+Brief descriptions of the variables are given below.
+ 
+ 1. ID
+ 2. SEX 
+    + 1=Male
+    + 2=Female
+ 3. RACE
+    + 1= Hispanic
+    + 2= Asian
+    + 3= Black
+    + 4= White
+ 4. SES  Socioecomonic Status
+    + 1= Low
+    + 2= Medium
+    + 3= High
+ 5. SCTYP School type
+    + 1= Public
+    + 2= Private
+ 6. HSP High school program
+    + 1= General
+    + 2= Academic preparatory
+    + 3= Vocational/technical
+ 7. LOCUS  Locus of control (this is a standardized continuous score with mean 0 and SD 1)
+ 8. CONCPT  Self-concept (this is a standardized continuous score with mean 0 and SD 1)
+ 9. MOT  Motivation Average of 3 motivation items
+  10. CAR Career choice
+    + 1 = Clerical
+    + 2 = Craftsman
+    + 3 = Farmer
+    + 4 = Homemaker
+    + 5 = Laborer
+    + 6 = Manager
+    + 7 = Military
+    + 8 = Operative
+    + 9 = Professional 11
+    + 10 = Professional 22
+    + 11 = Proprietor
+    + 12 = Protective
+    + 13 = Sales
+    + 14 = School
+    + 15 = Service
+    + 16 = Technical
+    + 17 = Not working
+  11. RDG  Reading T-score standardized to mean 50 and SD 10
+  12. WRTG  Writing T-score standardized to mean 50 and SD 10
+  13. MATH  Math T-score standardized to mean 50 and SD 10
+  14. SCI  Science T-score standardized to mean 50 and SD 10
+  15. CIV Civics T-score standardized to mean 50 and SD
+
+
+## Research question:
+  From this set of data, we are interested to explore how different variables can be used to predict math performance. We will use all variables excluding `car`, as it is the result of a follow-up survey two years after the other data were collected, which makes very little empirical sense using it for prediction.
+
+## Modeling  
+  We first randomly throw in all the variables and their combinations of interaction to help us get a feeling of how linear modeling can explain the varation in `math`.
+```{r}
+math_mod1=lm(math~factor(sex)+factor(race)+factor(ses)+factor(sctyp)+factor(hsp)
+             +locus+concpt+mot+rdg+wrtg+sci+civ. #single
+             +factor(sex)*factor(race)+factor(race)*factor(ses)+factor(sctyp)*factor(ses)+factor(race)*factor(sctyp)+factor(sex)*factor(ses)
+             +factor(race)*mot+factor(race)*concpt+factor(race)*locus+factor(race)*rdg+factor(race)*wrtg+factor(race)*civ.+factor(race)*sci
+             +factor(hsp)*factor(race)+factor(hsp)*factor(ses)+factor(hsp)*factor(sctyp)+factor(hsp)*factor(sex)
+             +factor(race)*factor(sex)*factor(sctyp)*mot+factor(race)*factor(sex)*factor(sctyp)*concpt+factor(race)*factor(sex)*factor(sctyp)*locus
+             
+             +I(rdg^2)+I(wrtg^2)+I(sci^2)+I(civ.^2)
+             +I(locus^2)+I(concpt^2)+I(mot^2) #ploy
+             
+             +factor(hsp)*sci+factor(hsp)*wrtg+factor(hsp)*rdg+factor(hsp)*mot+factor(hsp)*concpt+factor(hsp)*locus
+             +factor(ses)*sci+factor(ses)*wrtg+factor(ses)*rdg+factor(ses)*mot+factor(ses)*concpt+factor(ses)*locus
+             +factor(sctyp)*sci+factor(sctyp)*wrtg+factor(sctyp)*rdg+factor(sctyp)*mot+factor(sctyp)*concpt+factor(sctyp)*locus
+             
+             +factor(hsp)*factor(ses)*sci+factor(hsp)*factor(ses)*wrtg+factor(hsp)*factor(ses)*rdg+factor(hsp)*factor(ses)*civ.
+             +rdg*wrtg+sci*wrtg+rdg*sci+sci*civ.+sci*rdg*wrtg
+            ,data=hsb_data)
+summary(math_mod1)$r.squared
+
+```
+
+ The model's ability to account for varibility is not perfect but decent. However, the size of this model is incredibly large and not very easy to interpret. We next will select the best model to optimize the modelling using foward, backward, and stepwise approach.
+
+## Model selection
+```{r }
+mod_start=lm(math~1, data = hsb_data)
+back=step(math_mod1, direction="backward")
+```
+
+```{r}
+summary(back)
+```
+```{r}
+length(coefficients(back))
+```
+
+The backward selection gives us a huge model with 38 variables. We next try the foward selection.
+```{r}
+forward=step(mod_start, 
+           math~factor(sex)+factor(race)+factor(ses)+factor(sctyp)+factor(hsp)
+             +locus+concpt+mot+rdg+wrtg+sci+civ. #single
+             +factor(sex)*factor(race)+factor(race)*factor(ses)+factor(sctyp)*factor(ses)+factor(race)*factor(sctyp)+factor(sex)*factor(ses)
+             +factor(race)*mot+factor(race)*concpt+factor(race)*locus+factor(race)*rdg+factor(race)*wrtg+factor(race)*civ.+factor(race)*sci
+             +factor(hsp)*factor(race)+factor(hsp)*factor(ses)+factor(hsp)*factor(sctyp)+factor(hsp)*factor(sex)
+             +factor(race)*factor(sex)*factor(sctyp)*mot+factor(race)*factor(sex)*factor(sctyp)*concpt+factor(race)*factor(sex)*factor(sctyp)*locus
+             
+             +I(rdg^2)+I(wrtg^2)+I(sci^2)+I(civ.^2)
+             +I(locus^2)+I(concpt^2)+I(mot^2) #ploy
+             
+             +factor(hsp)*sci+factor(hsp)*wrtg+factor(hsp)*rdg+factor(hsp)*mot+factor(hsp)*concpt+factor(hsp)*locus
+             +factor(ses)*sci+factor(ses)*wrtg+factor(ses)*rdg+factor(ses)*mot+factor(ses)*concpt+factor(ses)*locus
+             +factor(sctyp)*sci+factor(sctyp)*wrtg+factor(sctyp)*rdg+factor(sctyp)*mot+factor(sctyp)*concpt+factor(sctyp)*locus
+             
+             +factor(hsp)*factor(ses)*sci+factor(hsp)*factor(ses)*wrtg+factor(hsp)*factor(ses)*rdg+factor(hsp)*factor(ses)*civ.
+             +rdg*wrtg+sci*wrtg+rdg*sci+sci*civ.+sci*rdg*wrtg,
+           direction="forward")
+```
+```{r}
+summary(forward)
+```
+```{r}
+length(coefficients(forward))
+```
+
+The foward approach gives us a much smaller model without sacrificing too much on the r.squared and sigma. We will next try to stepwise approach.
+```{r}
+stepwise=step(mod_start, 
+           math~factor(sex)+factor(race)+factor(ses)+factor(sctyp)+factor(hsp)
+             +locus+concpt+mot+rdg+wrtg+sci+civ. #single
+             +factor(sex)*factor(race)+factor(race)*factor(ses)+factor(sctyp)*factor(ses)+factor(race)*factor(sctyp)+factor(sex)*factor(ses)
+             +factor(race)*mot+factor(race)*concpt+factor(race)*locus+factor(race)*rdg+factor(race)*wrtg+factor(race)*civ.+factor(race)*sci
+             +factor(hsp)*factor(race)+factor(hsp)*factor(ses)+factor(hsp)*factor(sctyp)+factor(hsp)*factor(sex)
+             +factor(race)*factor(sex)*factor(sctyp)*mot+factor(race)*factor(sex)*factor(sctyp)*concpt+factor(race)*factor(sex)*factor(sctyp)*locus
+             
+             +I(rdg^2)+I(wrtg^2)+I(sci^2)+I(civ.^2)
+             +I(locus^2)+I(concpt^2)+I(mot^2) #ploy
+             
+             +factor(hsp)*sci+factor(hsp)*wrtg+factor(hsp)*rdg+factor(hsp)*mot+factor(hsp)*concpt+factor(hsp)*locus
+             +factor(ses)*sci+factor(ses)*wrtg+factor(ses)*rdg+factor(ses)*mot+factor(ses)*concpt+factor(ses)*locus
+             +factor(sctyp)*sci+factor(sctyp)*wrtg+factor(sctyp)*rdg+factor(sctyp)*mot+factor(sctyp)*concpt+factor(sctyp)*locus
+             
+             +factor(hsp)*factor(ses)*sci+factor(hsp)*factor(ses)*wrtg+factor(hsp)*factor(ses)*rdg+factor(hsp)*factor(ses)*civ.
+             +rdg*wrtg+sci*wrtg+rdg*sci+sci*civ.+sci*rdg*wrtg,
+           direction="both")
+```
+```{r}
+summary(stepwise)
+```
+```{r}
+length(coefficients(stepwise))
+```
+
+The stepwise approach gives the same model as the forward approach. We will finally use the leave-one-out cross-validated RMSE to help us come to the conclusion on which of these models to help for further interpreteation.
+```{r}
+calc_loocv_rmse = function(model) {
+  sqrt(mean((resid(model) / (1 - hatvalues(model))) ^ 2))
+}
+
+calc_loocv_rmse(forward)
+calc_loocv_rmse(back)
+```
+
+Since the results are comparable, we will keep the foward model for parsimony reason.
+
+## Model intepretation
+We will take a look at the model coefficients and their significance.
+```{r}
+coefficients(summary(forward))
+```
+
+We can see that out of the many predictors that we use, not all are significant, and a few of them have parameter values that are pretty much ignorable. However, we decide to keep them for the sake of accurate prediction. For empirical purpose, we will select a few parameters that are more significant and impactful to intepret.
+
+According to our final model, `race`, `hsp`, `ses` and `sex` are influential in predicting math performance, particularly:
+
+ * On average, students participating in academic programs, compared with those participating general program, score 4.92 lower; among students in academic programs, girls score 7.24 lower , medium Socioecomonic Status score 7.39 lower, and high Socioecomonic Status score 8.74 lower. 
+ * On average, students participating in vocational programs, compared with those participating general program, score 0.95 higher; among students in vocational programs, girls score 1.06 lower , medium Socioecomonic Status score 2.45 lower, and high Socioecomonic Status score 2.19 higher. 
+ * On average, Asian students score 4.73 higher then Hispanic; among Asian students, female score 7.05 higher;
+ * Black students score 3.72 lower than Hispanic; among Black students, female score 3.32 higher;
+ * White students score 0.98 lower than Hispanic; among White students, female score 3.48 higher;
+ * On average, students with medium Socioecomonic Status score 5.64 higher than low status; 
+ * On average, students with high Socioecomonic Status score -1.93 lower than low status.
+ 
+
+
